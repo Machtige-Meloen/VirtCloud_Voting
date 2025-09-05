@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VirtCloud Vote</title>
+  <style>
+    body {
+      background: linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 6px 32px rgba(50,70,130,0.13);
+      padding: 2.5rem 2rem 2rem 2rem;
+      max-width: 400px;
+      width: 96%;
+      margin: 2rem auto;
+      text-align: center;
+    }
+    h1 {
+      color: #2b3146;
+      margin-bottom: 1.5rem;
+      font-size: 2rem;
+      letter-spacing: 1px;
+    }
+    .vote-btn {
+      background: linear-gradient(90deg, #4f8cff 0%, #7b40ff 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      margin: 1rem 0.5rem 0.5rem 0.5rem;
+      font-size: 1.12rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.08s, box-shadow 0.12s;
+      box-shadow: 0 2px 8px rgba(70,70,170,0.12);
+    }
+    .vote-btn:active {
+      transform: scale(0.97);
+      box-shadow: 0 1px 4px rgba(70,70,170,0.10);
+    }
+    .vote-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 1.2rem;
+    }
+    .counter {
+      margin-top: 0.7rem;
+      margin-bottom: 1.1rem;
+      font-size: 1.2rem;
+      background: #edf2fb;
+      color: #4f3d78;
+      border-radius: 6px;
+      padding: 0.5em 1.2em;
+      display: inline-block;
+      min-width: 52px;
+      font-weight: 500;
+      box-shadow: 0 1px 3px rgba(120,120,170,0.07);
+    }
+    .info {
+      color: #6b7c9c;
+      font-size: 0.99rem;
+      margin-top: 1.7rem;
+    }
+    @media (max-width: 500px) {
+      .container {
+        padding: 1.5rem 0.5rem;
+      }
+      h1 {
+        font-size: 1.35rem;
+      }
+      .vote-btn {
+        font-size: 1rem;
+        padding: 0.8rem 0.8rem;
+      }
+    }
+  </style>
+  <!-- Firebase v12 SDK's direct via ES modules -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getDatabase, ref, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+    // Jouw Firebase config met de juiste databaseURL!
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUvCwVc_PTxKp4Q6rgzWnyFTWHqf49OFU",
+      authDomain: "virtcloude-voting.firebaseapp.com",
+      databaseURL: "https://virtcloude-voting-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "virtcloude-voting",
+      storageBucket: "virtcloude-voting.appspot.com",
+      messagingSenderId: "703008066724",
+      appId: "1:703008066724:web:4f3b2e821ec1602150ea31",
+      measurementId: "G-69LFFT56QY"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    function updateUI(complain, wait) {
+      document.getElementById("complain-count").textContent = complain;
+      document.getElementById("wait-count").textContent = wait;
+    }
+
+    function disableVoting() {
+      document.getElementById("complain-btn").disabled = true;
+      document.getElementById("wait-btn").disabled = true;
+    }
+
+    function hasVoted() {
+      return !!localStorage.getItem("virtcloud-voted");
+    }
+
+    function setVoted(type) {
+      localStorage.setItem("virtcloud-voted", type);
+    }
+
+    function listenCounts() {
+      const votesRef = ref(db, "votes");
+      onValue(votesRef, (snapshot) => {
+        const data = snapshot.val() || { complain: 0, wait: 0 };
+        updateUI(data.complain || 0, data.wait || 0);
+      });
+    }
+
+    function vote(type) {
+      if (hasVoted()) return;
+      const voteRef = ref(db, "votes/" + type);
+      runTransaction(voteRef, (current) => {
+        return (current || 0) + 1;
+      }).then(() => {
+        setVoted(type);
+        disableVoting();
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      if (hasVoted()) disableVoting();
+      listenCounts();
+
+      document.getElementById("complain-btn").addEventListener("click", function() {
+        vote("complain");
+      });
+      document.getElementById("wait-btn").addEventListener("click", function() {
+        vote("wait");
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>VirtCloud Vote</h1>
+    <div class="vote-group">
+      <button class="vote-btn" id="complain-btn">
+        Ik heb geklaagd dat de server het niet doet
+      </button>
+      <div class="counter" id="complain-count">0</div>
+    </div>
+    <div class="vote-group">
+      <button class="vote-btn" id="wait-btn">
+        Ik heb niet geklaagd en ik wacht als een goeie klant
+      </button>
+      <div class="counter" id="wait-count">0</div>
+    </div>
+    <div class="info">
+      Je kunt maar één keer stemmen.<br>
+      <small>De telling is voor iedereen gelijk en live.</small>
+    </div>
+  </div>
+</body>
+</html>
